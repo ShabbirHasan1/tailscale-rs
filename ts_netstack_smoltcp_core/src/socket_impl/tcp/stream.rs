@@ -91,10 +91,18 @@ impl Netstack {
                     },
                     Ok(buf) => TcpStreamResponse::Recv { buf }.into(),
                     Err(tcp::RecvError::Finished) => TcpStreamResponse::Finished.into(),
-                    Err(tcp::RecvError::InvalidState) => {
-                        tracing::error!(state = %sock.state(), "invalid socket state for recv");
-                        Error::InvariantViolated.into()
-                    }
+                    Err(tcp::RecvError::InvalidState) => match sock.state() {
+                        tcp::State::Closed
+                        | tcp::State::Closing
+                        | tcp::State::CloseWait
+                        | tcp::State::LastAck
+                        | tcp::State::FinWait1
+                        | tcp::State::FinWait2 => Error::TcpStream(TcpStreamError::Reset).into(),
+                        state => {
+                            tracing::error!(%state, "invalid socket state for recv");
+                            Error::InvariantViolated.into()
+                        }
+                    },
                 }
             }
 

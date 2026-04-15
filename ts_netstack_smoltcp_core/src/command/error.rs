@@ -126,7 +126,7 @@ impl From<Error> for std::io::Error {
         use std::io::{Error as StdErr, ErrorKind};
 
         match value {
-            Error::BadRequest => StdErr::new(ErrorKind::InvalidInput, Error::BadRequest),
+            Error::BadRequest => ErrorKind::InvalidInput.into(),
             Error::TcpStream(s) => s.into(),
             other => StdErr::other(other),
         }

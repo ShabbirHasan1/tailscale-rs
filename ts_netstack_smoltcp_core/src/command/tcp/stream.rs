@@ -22,7 +22,7 @@ pub enum Error {
 impl From<Error> for std::io::Error {
     fn from(value: Error) -> Self {
         match value {
-            Error::Reset => std::io::Error::new(std::io::ErrorKind::ConnectionReset, value),
+            Error::Reset => std::io::ErrorKind::ConnectionReset.into(),
         }
     }
 }
