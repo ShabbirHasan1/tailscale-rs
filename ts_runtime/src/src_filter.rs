@@ -5,7 +5,7 @@ use kameo::{
     message::{Context, Message},
 };
 use ts_bart::{RoutingTable, Table};
-use ts_keys::NodePublicKey;
+use ts_transport::PeerId;
 
 use crate::{Error, env::Env, peer_tracker::PeerState};
 
@@ -25,16 +25,19 @@ impl kameo::Actor for SourceFilterUpdater {
 }
 
 #[derive(Clone)]
-pub struct SourceFilterState(pub Arc<Table<NodePublicKey>>);
+pub struct SourceFilterState(pub Arc<Table<PeerId>>);
 
 impl Message<PeerState> for SourceFilterUpdater {
     type Reply = ();
 
     async fn handle(&mut self, state_update: PeerState, _ctx: &mut Context<Self, Self::Reply>) {
         let mut src_filter = Table::default();
+
         for (nodekey, node) in state_update.peers.iter() {
+            let info = self.env.peer_db.get_or_insert(nodekey);
+
             for route in node.accepted_routes.iter() {
-                src_filter.insert(route.to_owned(), *nodekey);
+                src_filter.insert(route.to_owned(), info.peer_id);
             }
         }
 

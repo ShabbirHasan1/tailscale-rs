@@ -5,14 +5,14 @@ use kameo::{
     message::{Context, Message},
 };
 use tokio::sync::mpsc;
-use ts_keys::NodePublicKey;
 use ts_packet::PacketMut;
-use ts_transport::{OverlayTransportId, UnderlayTransportId};
+use ts_transport::{OverlayTransportId, PeerId, UnderlayTransportId};
 
 use crate::{
     Error,
     env::Env,
     packetfilter::PacketFilterState,
+    peer_tracker::PeerState,
     route_updater::{PeerRouteUpdate, SelfRouteUpdate},
     src_filter::SourceFilterState,
 };
@@ -24,10 +24,10 @@ pub type OverlayToDataplane = mpsc::UnboundedSender<Vec<PacketMut>>;
 pub type OverlayFromDataplane = mpsc::UnboundedReceiver<Vec<PacketMut>>;
 
 /// Queue for packets leaving the underlay to the dataplane.
-pub type UnderlayToDataplane = mpsc::UnboundedSender<(NodePublicKey, Vec<PacketMut>)>;
+pub type UnderlayToDataplane = mpsc::UnboundedSender<(PeerId, Vec<PacketMut>)>;
 
 /// Queue for packets entering an underlay from the dataplane.
-pub type UnderlayFromDataplane = mpsc::UnboundedReceiver<(NodePublicKey, Vec<PacketMut>)>;
+pub type UnderlayFromDataplane = mpsc::UnboundedReceiver<(PeerId, Vec<PacketMut>)>;
 
 pub struct DataplaneActor {
     dataplane: Arc<ts_dataplane::async_tokio::DataPlane>,
@@ -68,12 +68,14 @@ impl kameo::Actor for DataplaneActor {
     async fn on_start(env: Self::Args, slf: ActorRef<Self>) -> Result<Self, Self::Error> {
         let dataplane = Arc::new(ts_dataplane::async_tokio::DataPlane::new(
             env.keys.node_keys,
+            env.peer_db.clone(),
         ));
 
         env.subscribe::<PeerRouteUpdate>(&slf).await?;
         env.subscribe::<SelfRouteUpdate>(&slf).await?;
         env.subscribe::<PacketFilterState>(&slf).await?;
         env.subscribe::<SourceFilterState>(&slf).await?;
+        env.subscribe::<PeerState>(&slf).await?;
 
         let task_dataplane = dataplane.clone();
 
@@ -84,6 +86,31 @@ impl kameo::Actor for DataplaneActor {
         tracing::trace!("dataplane running");
 
         Ok(Self { dataplane, task })
+    }
+}
+
+impl Message<PeerState> for DataplaneActor {
+    type Reply = ();
+
+    async fn handle(&mut self, msg: PeerState, _ctx: &mut Context<Self, Self::Reply>) {
+        let mut dp = self.dataplane.inner().await;
+
+        for key in &msg.upserts {
+            dp.peer_db.get_or_insert(key);
+
+            dp.wireguard.add_peer(ts_tunnel::PeerConfig {
+                key: *key,
+                psk: [0u8; 32].into(),
+            });
+        }
+
+        for key in &msg.deletions {
+            dp.peer_db.remove(key);
+
+            if let Some(peer_id) = dp.wireguard.peer_id(*key) {
+                dp.wireguard.remove_peer(peer_id);
+            }
+        }
     }
 }
 

@@ -5,11 +5,10 @@ use kameo::{
     message::{Context, Message},
 };
 use ts_bart::RoutingTable;
-use ts_keys::NodePublicKey;
 use ts_overlay_router::{
     inbound::RouteAction as InboundRouteAction, outbound::RouteAction as OutboundRouteAction,
 };
-use ts_transport::{OverlayTransportId, UnderlayTransportId};
+use ts_transport::{OverlayTransportId, PeerId, UnderlayTransportId};
 
 use crate::{Error, env::Env, multiderp, multiderp::Multiderp, peer_tracker::PeerState};
 
@@ -50,7 +49,7 @@ pub struct PeerRouteUpdate {
 }
 
 pub struct PeerRoutesInner {
-    pub underlay_routes: HashMap<NodePublicKey, UnderlayTransportId>,
+    pub underlay_routes: HashMap<PeerId, UnderlayTransportId>,
     pub overlay_out_routes: ts_bart::Table<OutboundRouteAction>,
 }
 
@@ -69,10 +68,14 @@ impl Message<PeerState> for RouteUpdater {
         for peer in msg.peers.values() {
             let span = tracing::trace_span!(
                 "peer_update",
-                peer = %peer.node_key,
+                peer_key = %peer.node_key,
                 region = tracing::field::Empty,
                 underlay_transport = tracing::field::Empty,
+                peer_id = tracing::field::Empty,
             );
+
+            let info = self.env.peer_db.get_or_insert(&peer.node_key);
+            span.record("peer_id", tracing::field::debug(info.peer_id));
 
             let Some(region) = peer.derp_region else {
                 tracing::trace!(parent: &span, "peer has no derp region");
@@ -89,7 +92,7 @@ impl Message<PeerState> for RouteUpdater {
             {
                 Ok(Some(transport_id)) => {
                     span.record("underlay_transport", tracing::field::debug(transport_id));
-                    underlay_out.insert(peer.node_key, transport_id);
+                    underlay_out.insert(info.peer_id, transport_id);
                     tracing::trace!(parent: &span, "set underlay route");
                 }
                 Ok(None) => {
@@ -103,7 +106,7 @@ impl Message<PeerState> for RouteUpdater {
             for route in &peer.accepted_routes {
                 tracing::trace!(parent: &span, %route, "routes");
 
-                overlay_out.insert(*route, OutboundRouteAction::Wireguard(peer.node_key));
+                overlay_out.insert(*route, OutboundRouteAction::Wireguard(info.peer_id));
             }
         }
 

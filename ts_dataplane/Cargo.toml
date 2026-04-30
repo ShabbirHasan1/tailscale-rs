@@ -28,7 +28,9 @@ ts_bart.workspace = true
 
 # Unconditionally required dependencies.
 etherparse = "0.19"
+redb = "4.1"
 tracing.workspace = true
+zerocopy.workspace = true
 
 # Required dependencies for the async_tokio feature.
 tokio = { workspace = true, optional = true, features = ["time", "sync"] }

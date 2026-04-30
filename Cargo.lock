@@ -2880,6 +2880,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "redb"
+version = "4.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e925444704b5f17d32bf42f5b6e2df050bceebc3dcd6e71cc73dafe8092e839"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.5.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4237,6 +4246,7 @@ name = "ts_dataplane"
 version = "0.2.0"
 dependencies = [
  "etherparse",
+ "redb",
  "tokio",
  "tracing",
  "ts_bart",
@@ -4248,6 +4258,7 @@ dependencies = [
  "ts_transport",
  "ts_tunnel",
  "ts_underlay_router",
+ "zerocopy",
 ]
 
 [[package]]
@@ -4435,7 +4446,6 @@ dependencies = [
  "itertools",
  "tracing",
  "ts_bart",
- "ts_keys",
  "ts_packet",
  "ts_transport",
 ]
@@ -4526,6 +4536,7 @@ dependencies = [
  "ts_packetfilter_state",
  "ts_transport",
  "ts_transport_derp",
+ "ts_tunnel",
 ]
 
 [[package]]
@@ -4554,8 +4565,8 @@ dependencies = [
 name = "ts_transport"
 version = "0.2.0"
 dependencies = [
- "ts_keys",
  "ts_packet",
+ "zerocopy",
 ]
 
 [[package]]
@@ -4629,7 +4640,6 @@ dependencies = [
 name = "ts_underlay_router"
 version = "0.2.0"
 dependencies = [
- "ts_keys",
  "ts_packet",
  "ts_transport",
 ]

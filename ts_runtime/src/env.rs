@@ -13,6 +13,7 @@ use crate::{Error, error::ResultExt};
 pub struct Env {
     pub bus: ActorRef<MessageBus>,
     pub keys: Arc<ts_keys::NodeState>,
+    pub peer_db: Arc<ts_dataplane::PeerDb>,
 
     /// Whether the runtime is shutdown.
     ///
@@ -31,6 +32,7 @@ impl Env {
             bus: MessageBus::spawn_default(),
             keys: Arc::new(keys),
             shutdown,
+            peer_db: Default::default(),
         }
     }
 

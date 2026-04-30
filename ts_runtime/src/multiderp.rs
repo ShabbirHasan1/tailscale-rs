@@ -11,8 +11,8 @@ use kameo::{
 };
 use tokio::{sync::watch, task::JoinSet};
 use ts_control::DerpRegion;
-use ts_keys::NodeKeyPair;
-use ts_transport::{UnderlayTransport, UnderlayTransportId};
+use ts_keys::{NodeKeyPair, NodePublicKey};
+use ts_transport::{PeerId, UnderlayTransport, UnderlayTransportId};
 use ts_transport_derp::RegionId;
 
 use crate::{
@@ -72,6 +72,8 @@ impl Multiderp {
         };
         let (home_derp_tx, mut home_derp_rx) = watch::channel(false);
 
+        let peer_db = self.env.peer_db.clone();
+
         self.tasks.spawn(async move {
             while !*shutdown.borrow() {
                 tokio::select! {
@@ -85,6 +87,7 @@ impl Multiderp {
                         &down,
                         &mut up,
                         &mut home_derp_rx,
+                        &peer_db,
                     ) => if let Err(e) = ret {
                         tracing::error!(error = %e, region_id = %id, "running derp client");
                         tokio::time::sleep(Duration::from_millis(500)).await;
@@ -121,6 +124,18 @@ impl Multiderp {
     }
 }
 
+struct PeerDbLookup<'a>(&'a ts_dataplane::PeerDb);
+
+impl ts_transport_derp::PeerLookup for PeerDbLookup<'_> {
+    fn id_to_key(&self, id: PeerId) -> Option<NodePublicKey> {
+        Some(self.0.get_by_id(id)?.node_key)
+    }
+
+    fn key_to_id(&self, key: &NodePublicKey) -> PeerId {
+        self.0.get_or_insert(key).peer_id
+    }
+}
+
 #[tracing::instrument(skip_all, fields(region_id = %id), name = "derp packet transport")]
 async fn run_derp_once(
     id: RegionId,
@@ -129,6 +144,7 @@ async fn run_derp_once(
     to_dataplane: &UnderlayToDataplane,
     from_dataplane: &mut UnderlayFromDataplane,
     home_derp_rx: &mut watch::Receiver<bool>,
+    peer_db: &ts_dataplane::PeerDb,
 ) -> Result<(), ts_transport_derp::Error> {
     const INACTIVITY_TIMEOUT: Duration = Duration::from_secs(10);
 
@@ -153,7 +169,12 @@ async fn run_derp_once(
 
         tracing::trace!("establishing derp connection");
 
-        let client = ts_transport_derp::DefaultClient::connect(&region.servers, &keys).await?;
+        let client = ts_transport_derp::DefaultClient::connect(
+            &region.servers,
+            &keys,
+            PeerDbLookup(peer_db),
+        )
+        .await?;
 
         if let Some(pending) = pending {
             tracing::trace!("sending queued packet");
@@ -172,10 +193,11 @@ async fn run_derp_once(
                 from_derp = client.recv_one() => {
                     last_activity = Instant::now();
 
-                    let (peer, pkt) = from_derp?;
-                    tracing::trace!(parent: &span, %peer, len = pkt.len(), "packet from derp server");
+                    let (peer_id, pkt) = from_derp?;
 
-                    let Ok(()) = to_dataplane.send((peer, vec![pkt])) else {
+                    tracing::trace!(parent: &span, %peer_id, len = pkt.len(), "packet from derp server");
+
+                    let Ok(()) = to_dataplane.send((peer_id, vec![pkt])) else {
                         tracing::error!(parent: &span, "underlay receive channel closed");
                         break;
                     };
