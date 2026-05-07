@@ -169,12 +169,12 @@ async fn run_derp_once(
 
         tracing::trace!("establishing derp connection");
 
-        let client =
-            ts_derp::DefaultClient::connect(&region.servers, &keys, PeerDbLookup(peer_db)).await?;
+        let client = ts_derp::DefaultClient::connect(&region.servers, &keys).await?;
+        let transport = client.into_transport(PeerDbLookup(peer_db));
 
         if let Some(pending) = pending {
             tracing::trace!("sending queued packet");
-            client.send([pending]).await?;
+            transport.send([pending]).await?;
         }
 
         let mut last_activity = Instant::now();
@@ -186,17 +186,20 @@ async fn run_derp_once(
                 (!*home_derp_rx.borrow()).then(|| last_activity + INACTIVITY_TIMEOUT);
 
             tokio::select! {
-                from_derp = client.recv_one() => {
+                from_derp = transport.recv() => {
                     last_activity = Instant::now();
 
-                    let (peer_id, pkt) = from_derp?;
+                    for ret in from_derp {
+                        let (peer_id, pkts) = ret?;
+                        let pkts = pkts.into_iter().collect::<Vec<_>>();
 
-                    tracing::trace!(parent: &span, %peer_id, len = pkt.len(), "packet from derp server");
+                        tracing::trace!(parent: &span, %peer_id, len = pkts.len(), "packet from derp server");
 
-                    let Ok(()) = to_dataplane.send((peer_id, vec![pkt])) else {
-                        tracing::error!(parent: &span, "underlay receive channel closed");
-                        break;
-                    };
+                        let Ok(()) = to_dataplane.send((peer_id, pkts)) else {
+                            tracing::error!(parent: &span, "underlay receive channel closed");
+                            break;
+                        };
+                    }
                 },
 
                 from_net = from_dataplane.recv() => {
@@ -209,7 +212,7 @@ async fn run_derp_once(
 
                     tracing::trace!(parent: &span, peer = %from_net.0, packets = from_net.1.len(), "packets to derp server");
 
-                    client.send([from_net]).await?;
+                    transport.send([from_net]).await?;
                 },
 
                 _ = option_timeout(inactivity_timeout) => {

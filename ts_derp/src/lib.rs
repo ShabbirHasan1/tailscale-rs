@@ -8,15 +8,17 @@ use core::{
 
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
-mod async_tokio;
+mod client;
 pub mod dial;
 mod error;
 pub mod frame;
 mod peer_lookup;
+mod transport;
 
-pub use async_tokio::{Client, DefaultClient};
+pub use client::{Client, DefaultClient};
 pub use error::Error;
 pub use peer_lookup::{DummyStaticLookup, PeerLookup};
+pub use transport::Transport;
 
 /// A 24-byte nonce for symmetric encryption with ChaCha20Poly1305.
 #[repr(C)]
