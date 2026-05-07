@@ -11,9 +11,9 @@ use kameo::{
 };
 use tokio::{sync::watch, task::JoinSet};
 use ts_control::DerpRegion;
+use ts_derp::RegionId;
 use ts_keys::{NodeKeyPair, NodePublicKey};
 use ts_transport::{PeerId, UnderlayTransport, UnderlayTransportId};
-use ts_transport_derp::RegionId;
 
 use crate::{
     Env, Error,
@@ -126,7 +126,7 @@ impl Multiderp {
 
 struct PeerDbLookup<'a>(&'a ts_dataplane::PeerDb);
 
-impl ts_transport_derp::PeerLookup for PeerDbLookup<'_> {
+impl ts_derp::PeerLookup for PeerDbLookup<'_> {
     fn id_to_key(&self, id: PeerId) -> Option<NodePublicKey> {
         Some(self.0.get_by_id(id)?.node_key)
     }
@@ -145,7 +145,7 @@ async fn run_derp_once(
     from_dataplane: &mut UnderlayFromDataplane,
     home_derp_rx: &mut watch::Receiver<bool>,
     peer_db: &ts_dataplane::PeerDb,
-) -> Result<(), ts_transport_derp::Error> {
+) -> Result<(), ts_derp::Error> {
     const INACTIVITY_TIMEOUT: Duration = Duration::from_secs(10);
 
     loop {
@@ -169,12 +169,8 @@ async fn run_derp_once(
 
         tracing::trace!("establishing derp connection");
 
-        let client = ts_transport_derp::DefaultClient::connect(
-            &region.servers,
-            &keys,
-            PeerDbLookup(peer_db),
-        )
-        .await?;
+        let client =
+            ts_derp::DefaultClient::connect(&region.servers, &keys, PeerDbLookup(peer_db)).await?;
 
         if let Some(pending) = pending {
             tracing::trace!("sending queued packet");

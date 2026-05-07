@@ -3,9 +3,9 @@
 use std::{sync::Arc, time::Duration};
 
 use tokio::task::JoinSet;
+use ts_derp::PeerLookup;
 use ts_keys::NodeKeyPair;
 use ts_transport::UnderlayTransport;
-use ts_transport_derp::PeerLookup;
 
 mod common;
 
@@ -17,10 +17,10 @@ async fn main() -> ts_cli_util::Result<()> {
     let region = derp_map.get(&common::REGION_1).unwrap();
 
     let keypair = NodeKeyPair::new();
-    let peer_map = Arc::new(ts_transport_derp::DummyStaticLookup::default());
+    let peer_map = Arc::new(ts_derp::DummyStaticLookup::default());
     let self_id = peer_map.key_to_id(&keypair.public);
 
-    let client = ts_transport_derp::Client::connect(region, &keypair, peer_map.clone()).await?;
+    let client = ts_derp::Client::connect(region, &keypair, peer_map.clone()).await?;
     tracing::info!("derp handshake done");
 
     let client = Arc::new(client);

@@ -133,7 +133,7 @@ impl AsyncControlClient {
     #[tracing::instrument(skip_all, fields(map_url = %self.map_url(), %region_id), err, level = "trace")]
     pub async fn set_home_region<'c>(
         &mut self,
-        region_id: ts_transport_derp::RegionId,
+        region_id: ts_derp::RegionId,
         latencies: impl IntoIterator<Item = (&'c str, f64)>,
     ) -> Result<(), MapStreamError> {
         tracing::trace!(region = %region_id, "reporting home derp to control server");
@@ -171,7 +171,7 @@ impl AsyncControlClient {
 #[derive(Debug)]
 pub enum Command {
     SetDerpHomeRegion {
-        id: ts_transport_derp::RegionId,
+        id: ts_derp::RegionId,
         latencies: BTreeMap<String, f64>,
     },
 }
