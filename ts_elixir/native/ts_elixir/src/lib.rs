@@ -129,6 +129,7 @@ fn load_key_file(env: rustler::Env, path: &str) -> impl Encoder {
     let result = TOKIO_RUNTIME
         .block_on(tailscale::config::load_key_file(path, Default::default()))
         .map(|keys| {
+            let keys: tailscale::keys::NodeState = keys.into();
             let result: Keystate = keys.into();
             result
         })

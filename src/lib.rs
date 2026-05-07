@@ -317,7 +317,7 @@ pub mod keys {
     pub use ts_keys::{
         DiscoKeyPair, DiscoPrivateKey, DiscoPublicKey, MachineKeyPair, MachinePrivateKey,
         MachinePublicKey, NetworkLockKeyPair, NetworkLockPrivateKey, NetworkLockPublicKey,
-        NodeKeyPair, NodePrivateKey, NodePublicKey, NodeState,
+        NodeKeyPair, NodePrivateKey, NodePublicKey, NodeState, PersistState,
     };
 }
 

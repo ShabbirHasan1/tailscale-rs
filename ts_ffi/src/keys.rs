@@ -138,6 +138,7 @@ pub unsafe extern "C" fn ts_load_key_file(
 
     match TOKIO_RUNTIME.block_on(tailscale::config::load_key_file(s, mode)) {
         Ok(state) => {
+            let state: tailscale::keys::NodeState = state.into();
             *key_state = state.into();
             tracing::info!(?key_state, "loaded key state");
 

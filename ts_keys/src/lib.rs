@@ -7,7 +7,7 @@ mod keystate;
 mod macros;
 
 #[doc(inline)]
-pub use keystate::NodeState;
+pub use keystate::{NodeState, PersistState};
 use macros::{
     _create_x25519_base_key_type, create_x25519_keypair_types, create_x25519_private_key_type,
     create_x25519_public_key_type,
