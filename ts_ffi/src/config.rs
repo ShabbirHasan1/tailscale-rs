@@ -1,6 +1,6 @@
 use std::ffi::c_char;
 
-use crate::{keys::node_key_state, util};
+use crate::{keys::persisted_key_state, util};
 
 /// Tailscale configuration.
 ///
@@ -38,7 +38,7 @@ pub struct config<'a> {
     /// The key state to use.
     ///
     /// If `NULL`, ephemeral key state is generated.
-    pub key_state: Option<&'a mut node_key_state>,
+    pub key_state: Option<&'a mut persisted_key_state>,
 }
 
 impl config<'_> {

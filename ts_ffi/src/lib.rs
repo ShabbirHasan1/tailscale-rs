@@ -135,7 +135,7 @@ pub unsafe extern "C" fn ts_init_from_key_file(
     key_file: *const c_char,
     auth_token: *const c_char,
 ) -> Option<Box<device>> {
-    let mut state = keys::node_key_state::default();
+    let mut state = keys::persisted_key_state::default();
 
     // SAFETY: CStr invariants maintained by function precondition
     if unsafe { keys::ts_load_key_file(key_file, false, &mut state) } < 0 {

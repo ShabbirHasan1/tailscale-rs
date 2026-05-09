@@ -31,12 +31,12 @@ macro_rules! impl_to_from {
 
         impl From<$key> for key {
             fn from(value: $key) -> Self {
-                key(conv::<[u8; 32]>(value))
+                key(value.into())
             }
         }
         impl From<&$key> for key {
             fn from(value: &$key) -> Self {
-                key(conv::<[u8; 32]>(*value))
+                key((*value).into())
             }
         }
     };
@@ -56,48 +56,37 @@ impl_to_from!(
 /// Tailscale key state for running a device.
 #[derive(Debug, Default)]
 #[repr(C)]
-pub struct node_key_state {
+pub struct persisted_key_state {
     /// Private key for the node (device) identity.
     pub node_private_key: key,
     /// Private key for the machine.
     pub machine_private_key: key,
     /// Private key for tailnet lock.
     pub network_lock_private_key: key,
-    /// Private key for Tailscale discovery protocol (disco).
-    pub disco_private_key: key,
 }
 
-fn conv<T>(u: impl Into<T>) -> T {
-    u.into()
-}
-
-impl From<node_key_state> for ts_keys::NodeState {
-    fn from(value: node_key_state) -> Self {
+impl From<persisted_key_state> for ts_keys::PersistState {
+    fn from(value: persisted_key_state) -> Self {
         (&value).into()
     }
 }
 
-impl From<&node_key_state> for ts_keys::NodeState {
-    fn from(value: &node_key_state) -> Self {
-        ts_keys::NodeState {
-            disco_keys: conv::<ts_keys::DiscoPrivateKey>(&value.disco_private_key).into(),
-            machine_keys: conv::<ts_keys::MachinePrivateKey>(&value.machine_private_key).into(),
-            network_lock_keys: conv::<ts_keys::NetworkLockPrivateKey>(
-                &value.network_lock_private_key,
-            )
-            .into(),
-            node_keys: conv::<ts_keys::NodePrivateKey>(&value.node_private_key).into(),
+impl From<&persisted_key_state> for ts_keys::PersistState {
+    fn from(value: &persisted_key_state) -> Self {
+        ts_keys::PersistState {
+            machine_key: (&value.machine_private_key).into(),
+            network_lock_key: (&value.network_lock_private_key).into(),
+            node_key: (&value.node_private_key).into(),
         }
     }
 }
 
-impl From<ts_keys::NodeState> for node_key_state {
-    fn from(value: ts_keys::NodeState) -> Self {
+impl From<ts_keys::PersistState> for persisted_key_state {
+    fn from(value: ts_keys::PersistState) -> Self {
         Self {
-            machine_private_key: value.machine_keys.private.into(),
-            network_lock_private_key: value.network_lock_keys.private.into(),
-            disco_private_key: value.disco_keys.private.into(),
-            node_private_key: value.node_keys.private.into(),
+            machine_private_key: value.machine_key.into(),
+            network_lock_private_key: value.network_lock_key.into(),
+            node_private_key: value.node_key.into(),
         }
     }
 }
@@ -117,7 +106,7 @@ impl From<ts_keys::NodeState> for node_key_state {
 pub unsafe extern "C" fn ts_load_key_file(
     path: *const c_char,
     overwrite_if_invalid: bool,
-    key_state: &mut node_key_state,
+    key_state: &mut persisted_key_state,
 ) -> ffi::c_int {
     let s = unsafe { CStr::from_ptr(path) };
     let s = match s.to_str() {
@@ -138,7 +127,6 @@ pub unsafe extern "C" fn ts_load_key_file(
 
     match TOKIO_RUNTIME.block_on(tailscale::config::load_key_file(s, mode)) {
         Ok(state) => {
-            let state: tailscale::keys::NodeState = state.into();
             *key_state = state.into();
             tracing::info!(?key_state, "loaded key state");
 

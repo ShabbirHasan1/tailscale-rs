@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use rustler::{Atom, NifResult, Term};
-use tailscale::keys::{DiscoPrivateKey, MachinePrivateKey, NetworkLockPrivateKey, NodePrivateKey};
 
 mod atoms {
     rustler::atoms! {
@@ -61,22 +60,20 @@ pub fn config_from_erl(
 pub struct Keystate {
     pub machine: Vec<u8>,
     pub node: Vec<u8>,
-    pub disco: Vec<u8>,
     pub network_lock: Vec<u8>,
 }
 
-impl From<tailscale::keys::NodeState> for Keystate {
-    fn from(value: tailscale::keys::NodeState) -> Self {
+impl From<tailscale::keys::PersistState> for Keystate {
+    fn from(value: tailscale::keys::PersistState) -> Self {
         Self {
-            machine: value.machine_keys.private.to_bytes().into(),
-            node: value.node_keys.private.to_bytes().into(),
-            disco: value.disco_keys.private.to_bytes().into(),
-            network_lock: value.network_lock_keys.private.to_bytes().into(),
+            machine: value.machine_key.to_bytes().into(),
+            node: value.node_key.to_bytes().into(),
+            network_lock: value.network_lock_key.to_bytes().into(),
         }
     }
 }
 
-impl TryFrom<Keystate> for tailscale::keys::NodeState {
+impl TryFrom<Keystate> for tailscale::keys::PersistState {
     type Error = ();
 
     fn try_from(value: Keystate) -> Result<Self, ()> {
@@ -88,10 +85,9 @@ impl TryFrom<Keystate> for tailscale::keys::NodeState {
         }
 
         Ok(Self {
-            machine_keys: key::<MachinePrivateKey>(value.machine)?.into(),
-            node_keys: key::<NodePrivateKey>(value.node)?.into(),
-            disco_keys: key::<DiscoPrivateKey>(value.disco)?.into(),
-            network_lock_keys: key::<NetworkLockPrivateKey>(value.network_lock)?.into(),
+            machine_key: key(value.machine)?,
+            node_key: key(value.node)?,
+            network_lock_key: key(value.network_lock)?,
         })
     }
 }

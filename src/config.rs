@@ -14,7 +14,7 @@ const AUTHKEY_VAR: &str = "TS_AUTH_KEY";
 /// Config for connecting to Tailscale.
 pub struct Config {
     /// The cryptographic keys representing this node's identity.
-    pub key_state: NodeState,
+    pub key_state: PersistState,
 
     // TODO(npry): let clients also define an app name once the sdk-level name moves
     //  to a dedicated field
@@ -43,7 +43,7 @@ impl Config {
     /// the key file.
     pub async fn default_with_key_file(p: impl AsRef<Path>) -> Result<Self, crate::Error> {
         Ok(Config {
-            key_state: load_key_file(p, Default::default()).await?.into(),
+            key_state: load_key_file(p, Default::default()).await?,
             ..Default::default()
         })
     }

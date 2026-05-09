@@ -174,7 +174,7 @@ impl Device {
         check_magic_env()?;
 
         let rt =
-            ts_runtime::Runtime::spawn(config.into(), auth_key, config.key_state.clone()).await?;
+            ts_runtime::Runtime::spawn(config.into(), auth_key, (&config.key_state).into()).await?;
         let channel = rt.channel().await?;
 
         Ok(Self {

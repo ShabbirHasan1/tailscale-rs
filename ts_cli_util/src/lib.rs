@@ -57,7 +57,7 @@ impl CommonArgs {
 
         let (client, stream) = ts_control::AsyncControlClient::connect(
             &(&config).into(),
-            &config.key_state,
+            &(&config.key_state).into(),
             self.auth_key.as_deref(),
         )
         .await?;

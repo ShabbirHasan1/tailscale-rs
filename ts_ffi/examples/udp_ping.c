@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
      * See the TCP example for a usage of `ts_init_from_key_file`, which collapses this init to a
      * single line, using a default config and key state from the selected file.
      */
-    struct ts_node_key_state key_state = {0};
+    struct ts_persisted_key_state key_state = {0};
     assert(ts_load_key_file(argv[1], false, &key_state) >= 0);
 
     struct ts_config config = {0};
