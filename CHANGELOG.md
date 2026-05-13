@@ -20,6 +20,8 @@ Records breaking or significant changes here. All dates are UTC.
   [#140](https://github.com/tailscale/tailscale-rs/pull/140) and [#148](https://github.com/tailscale/tailscale-rs/pull/148).
 - Fixed (ts_netstack_smoltcp): big improvement to TCP accept performance.
   [#141](https://github.com/tailscale/tailscale-rs/pull/141).
+- Updated MSRV to 1.94.1.
+  [#181](https://github.com/tailscale/tailscale-rs/pull/181).
 
 ## [0.2](https://github.com/tailscale/tailscale-rs/releases/tag/v0.2.0) - 2026-04-15
 

@@ -92,7 +92,7 @@ we currently don't have a timeline.
 
 ## MSRV and Edition
 
-The current MSRV is 1.93.1. The current edition is Rust 2024.
+The current MSRV is 1.94.1. The current edition is Rust 2024.
 
 `tailscale-rs` has a rolling MSRV (Minimum Supported Rust Version) policy to support the current
 and previous Rust compiler versions, and the latest
