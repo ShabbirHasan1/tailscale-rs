@@ -95,3 +95,7 @@ harness = false
 name = "throughput_tcp"
 required-features = ["tokio"]
 harness = false
+
+[[test]]
+name = "wrong_ip_version"
+required-features = ["tokio"]

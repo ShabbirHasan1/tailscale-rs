@@ -1,6 +1,7 @@
 #![allow(missing_docs, dead_code)]
 
 use core::net::{Ipv4Addr, SocketAddr};
+use std::sync::Once;
 
 pub extern crate ts_netstack_smoltcp as netstack;
 pub extern crate ts_netstack_smoltcp_core as netcore;
@@ -21,13 +22,17 @@ pub const PREFIX_LEN: u8 = 24;
 pub const PORT: u16 = 1000;
 
 pub fn init() {
-    if std::env::var("TOKIO_CONSOLE").is_ok_and(|x| x == "1") {
-        console_subscriber::init();
-    } else {
-        ts_cli_util::init_tracing();
-    }
+    static ONCE: Once = Once::new();
 
-    std::panic::set_hook(Box::new(tracing_panic::panic_hook));
+    ONCE.call_once(|| {
+        if std::env::var("TOKIO_CONSOLE").is_ok_and(|x| x == "1") {
+            console_subscriber::init();
+        } else {
+            ts_cli_util::init_tracing();
+        }
+
+        std::panic::set_hook(Box::new(tracing_panic::panic_hook));
+    });
 }
 
 pub fn netstack_endpoint() -> SocketAddr {

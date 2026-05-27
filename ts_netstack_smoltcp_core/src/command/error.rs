@@ -74,6 +74,11 @@ impl Error {
     pub fn zero_buffer() -> Self {
         Error::BadRequest(BadRequestReason::ZeroSizeBuffer)
     }
+
+    /// Tried to send a packet with the wrong IP version.
+    pub const fn wrong_ip_version() -> Self {
+        Error::BadRequest(BadRequestReason::WrongIpVersion)
+    }
 }
 
 /// Informational detail on the kind of internal error.
@@ -125,6 +130,10 @@ pub enum BadRequestReason {
     BigPacket,
     /// The size of a user-supplied buffer is zero, so cannot store a packet.
     ZeroSizeBuffer,
+    /// The requested IP was the wrong type.
+    ///
+    /// I.e., tried to send to an IPv6 peer on an IPv4 socket or vice versa.
+    WrongIpVersion,
 }
 
 impl fmt::Display for BadRequestReason {
@@ -136,6 +145,9 @@ impl fmt::Display for BadRequestReason {
             }
             BadRequestReason::ZeroSizeBuffer => {
                 write!(f, "the size of a user-supplied buffer is zero")
+            }
+            BadRequestReason::WrongIpVersion => {
+                write!(f, "wrong ip version")
             }
         }
     }

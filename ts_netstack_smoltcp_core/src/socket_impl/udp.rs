@@ -2,7 +2,7 @@ use alloc::vec;
 use core::net::SocketAddr;
 
 use bytes::Bytes;
-use smoltcp::{iface::SocketHandle, socket::udp};
+use smoltcp::{iface::SocketHandle, socket::udp, wire::IpVersion};
 
 use crate::command::{
     Error, Response,
@@ -42,6 +42,15 @@ impl crate::Netstack {
                 let handle = handle.unwrap();
 
                 let sock = self.socket_set.get_mut::<udp::Socket>(handle);
+                let sock_is_v4 = sock
+                    .endpoint()
+                    .addr
+                    .is_some_and(|ep| ep.version() == IpVersion::Ipv4);
+
+                if endpoint.is_ipv4() != sock_is_v4 {
+                    return Response::Error(Error::wrong_ip_version());
+                }
+
                 if buf.len() > sock.payload_send_capacity() {
                     tracing::error!(
                         len = buf.len(),

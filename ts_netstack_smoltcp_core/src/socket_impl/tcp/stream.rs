@@ -22,6 +22,10 @@ impl Netstack {
                 remote_endpoint,
                 local_endpoint,
             } => {
+                if remote_endpoint.is_ipv4() != local_endpoint.is_ipv4() {
+                    return Response::Error(Error::wrong_ip_version());
+                }
+
                 // Only occurs if we're polling a `WouldBlock`.
                 if let Some(handle) = handle {
                     return self.check_conn(
